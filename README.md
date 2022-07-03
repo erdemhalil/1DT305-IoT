@@ -28,9 +28,12 @@ Furtherly, this project can be extended to facilitate operating another IoT devi
 
 ## Computer Setup
 
-Since we are working with Arduino UNO Wifi 2, for this project you should install Arduino IDE by following [this guide](https://www.arduino.cc/en/Guide).
-
-TBC...
+1. Since we are working with Arduino Uno WiFi 2, for this project you should install Arduino IDE by following [this guide](https://www.arduino.cc/en/Guide).
+2. Install the core for the board (megaAVR) by following [this article](https://docs.arduino.cc/software/ide-v1/tutorials/getting-started/cores/arduino-megaavr). Make sure you select Arduino Uno WiFi Rev2.
+3. Install the required libraries. For a general guide [click here](https://docs.arduino.cc/software/ide-v1/tutorials/installing-libraries).
+    - DHT, WiFiNINA and SPI libraries can be installed directly through the Library Manager.
+    - [UbidotsUnoWifi](https://github.com/suhail-jr/Ubidots_Uno_Wifi/) library must be imported as a .zip file. Download it by [clicking here](https://github.com/suhail-jr/Ubidots_Uno_Wifi/archive/refs/heads/main.zip).
+4. Open [arduino.ino](https://github.com/erdemhalil/1DT305-IoT/blob/main/arduino/arduino.ino) file with Arduino IDE and [upload the sketch](https://support.arduino.cc/hc/en-us/articles/4733418441116-Upload-a-sketch-in-Arduino-IDE). 
 
 ## Putting everything together
 
@@ -50,15 +53,52 @@ For this project, the chosen platfrom was [Ubidots](https://ubidots.com/) which 
 
 The source code is located in [./arduino folder](https://github.com/erdemhalil/1DT305-IoT/tree/main/arduino)
 
-The code is simple as it makes use of a few libraries explained above. The board is first connected to a WiFi network, then, it continuously reads the sensor data, adds it to the Ubidot client by associating it with an existing variable ID and sends the data through HTTP.
+The code is simple as it makes use of a few libraries. DHT library lets us collect sensor data easily, whereas WiFiNINA, SPI and UbidotsUnoWifi libraries help ease the process of connecting to the network and sending data to Ubidots. 
 
-To make the code work for your case, you would need to change the macros (#define) in ["secrets.h"](https://github.com/erdemhalil/1DT305-IoT/blob/main/arduino/secrets.h). Currently I have macros for WiFi SSID, WiFI Password, Ubidots token and 3 Ubidots label IDs to store 3 sets of data (temperature, humidity and heat index). You can find more information on how to create an Ubidots account, dashboard, variables [here](https://hackmd.io/@lnu-iot/Hkpudaxq9).
+Firstly, the board activates the sensor and connects to a WiFi network in the setup block:
+```cpp
+dht.begin();
+client.wifiConnect(ssid, pass);
+```
+
+Then, it continuously reads the sensor data, adds it to the Ubidot client by associating it with an existing variable ID and sends the data through HTTP.  
+**NOTE:** Example is with temperature only!
+```cpp
+float temperature = getTemp();
+client.add(TEMP_LABEL, temperature);
+
+bool bufferSent = false;
+// Send data to Ubidots
+bufferSent = client.sendAll();
+```
+
+To make the code work for your case, you would need to change the macros (#define) in ["secrets.h"](https://github.com/erdemhalil/1DT305-IoT/blob/main/arduino/secrets.h). 
+
+```c
+// WiFi Network's SSID
+#define SSID "PLACEHOLDER"
+// WiFi Network's Password
+#define PASSWORD "PLACEHOLDER"
+// Ubidots TOKEN
+#define TOKEN "PLACEHOLDER"
+
+// Ubidots variables that will be updated
+#define TEMP_LABEL "PLACEHOLDER"
+#define HUM_LABEL "PLACEHOLDER" 
+#define HEAT_LABEL "PLACEHOLDER" 
+```
+
+Currently I have macros for WiFi SSID, WiFI Password, Ubidots token and 3 Ubidots label IDs to store 3 sets of data (temperature, humidity and heat index). You can find more information on how to create an Ubidots account, dashboard, variables and retrieve their IDs [here](https://hackmd.io/@lnu-iot/Hkpudaxq9).
 
 ## Transmitting the data / connectivity
 
 The wireless protocol I have chosen is WiFi as the project is intended for home use and I assumed that I would have a decent internet connection at all times. 
 
-Currently, data is collected and sent every 5 seconds. This can be modified by changing the value of DELAY macro in [./arduino/arduino.ino](https://github.com/erdemhalil/1DT305-IoT/blob/bc7235a3c66abe77b92dc26bf737d16705c95ebf/arduino/arduino.ino#L12). It's measured in milliseconds so, for instance, if you'd like to collect data every minute, you may change the value to 60000.
+Currently, data is collected and sent every 5 seconds. This can be modified by changing the value of DELAY macro in [./arduino/arduino.ino](https://github.com/erdemhalil/1DT305-IoT/blob/bc7235a3c66abe77b92dc26bf737d16705c95ebf/arduino/arduino.ino#L12). 
+```cpp
+#define DELAY 5000
+```
+It's measured in milliseconds so, for instance, if you'd like to collect data every minute, you may change the value to 60000.
 
 Data transmission relies entirely on HTTP since Ubidots provides a neat RESTful API to handle those requests and, unlike MQTT, there is no need to spend more effort on creating a broker. 
 
@@ -74,4 +114,4 @@ The Ubidots dashboard I have created provides three graphs for the three types o
 
 <img src=https://user-images.githubusercontent.com/71549844/177054465-f750357f-d5b8-4d34-87f5-23de2211fe02.jpg width=800>
 
-The project is very simple with only one type of sensor being used. As previously discussed, it can be easily extended or modified for your needs. A few more sensors that collect different type of data can be added which will enable you to have more insight. You can also combine this project with another IoT project to make the most out it, e.g. triggering IoT device if the temperature is below/above certain point.
+The project is very simple with only one type of sensor being used. As previously discussed, it can be easily extended or modified for your needs. A few more sensors that collect different type of data can be added which will enable you to gather more insight. You can also combine it with another IoT project to make the most out it, e.g. triggering IoT device if the temperature is below/above certain point.
